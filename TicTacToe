@@ -1,0 +1,124 @@
+from random import randrange
+
+def display_board(board):
+    # The function accepts one parameter containing the board's current status
+    # and prints it out to the console.
+    print('+-------' * 3, '+', sep='')
+    for row in range(3):
+        print('|       ' * 3, '|', sep='')
+        for column in range(3):
+            print('|   ' + str(board[row][column]) + '   ', end='')
+        print('|')
+        print('|       ' * 3, '|', sep='')
+        print('+-------' * 3, '+', sep='')
+
+def enter_move(board):
+    # The function accepts the board current status, asks the user about their move, 
+    # checks the input and updates the board according to the user's decision.
+    ok = False
+    while not ok:
+        user_move = input('Choose a number: ')
+        ok = len(user_move) == 1 and user_move >= '1' and user_move <= '9'
+        if not ok:
+            print('Invalid selection...try again. ')
+            continue
+        user_move = int(user_move)-1
+        row = user_move // 3
+        column = user_move % 3
+        sign = board[row][column]
+        ok = sign not in ['X','O']
+        if not ok:
+            print('Spot already selected...try again. ')
+            continue
+    board[row][column] = 'O'
+
+def make_list_of_free_fields(board):
+    # The function browses the board and builds a list of all the free squares; 
+    # the list consists of tuples, while each tuple is a pair of row and column numbers.
+    free_fields = []
+
+    for row in range(3):
+        for column in range(3):
+            if board[row][column] not in ['X','O']:
+                free_fields.append((row,column))
+    return free_fields
+
+def victory_for(board, sign):
+    # The function analyzes the board status in order to check if 
+    # the player using 'O's or 'X's has won the game
+    diagonal1 = diagonal2 = False
+
+    if sign == 'X':
+        winner = 'Computer'
+    elif sign == 'O':
+        winner = 'User'
+    else:
+        winner = None
+
+    for i in range(3):
+        if str(board[i][0]) + str(board[i][1]) + str(board[i][2]) == sign * 3: # check for winner across rows
+            return winner
+        elif str(board[0][i]) + str(board[1][i]) + str(board[2][i]) == sign * 3: # check for winner down columns
+            return winner
+        elif str(board[i][i]) == sign: # check first diagonal (top left to bottom right)
+            diagonal1 = True
+        elif str(board[i][2-i]) == sign: # check second diagonal (top right to bottom left)
+            diagonal2 = True
+        else:
+            return None
+        
+    if diagonal1 == True or diagonal2 == True: # if either diagonals are true, return the winner
+        return winner
+    return None # else return None
+
+
+def draw_move(board):
+    # The function draws the computer's move and updates the board.
+    free_fields = make_list_of_free_fields(board) # find fields that have not been played yet
+    fields = len(free_fields) # return a count of open fields
+    if fields > 0: # check that all fields have not been played
+        computer_move = randrange(fields) # produce random int
+        row, column = free_fields[computer_move] # find corresponding row & column
+        print('Computer chooses ', board[row][column])
+        board[row][column] = 'X' # assign X
+        
+board = [[j * 3 + i + 1 for i in range(3)] for j in range(3)]
+board[1][1] = 'X'
+
+display_board(board) # initialize the game
+move_toggle = True # set toggle to switch between players
+game_on = True # set condition to end the game
+
+while game_on == True:
+    
+    while move_toggle == True: # user's turn
+        enter_move(board) # user makes their move
+        display_board(board) # display updated board
+        winner = victory_for(board,'O') # check for winner
+        free_fields = make_list_of_free_fields(board) # also check for full board
+        if winner == 'User': # end game if user has won
+            print('User wins!')
+            game_on = False
+            break
+        elif len(free_fields) <= 0: # end game if all spots full
+            print('This game is a tie!')
+            game_on = False
+            break
+        else: # continue playing if spots available and user has not won
+            move_toggle = False
+    
+    while move_toggle == False: # computer's turn
+        draw_move(board) # computer chooses random spot
+        display_board(board) # display updated board
+        winner = victory_for(board,'X') # check for victory
+        free_fields = make_list_of_free_fields(board) # check for full board
+        if winner == 'Computer': # end game if computer has won
+            print('Computer wins!')
+            game_on = False
+            break
+        elif len(free_fields) <= 0: # end game if all spots full
+            print('This game is a tie!')
+            game_on = False
+            break
+        else: # continue playing if spots available and computer has not won
+            move_toggle = True 
