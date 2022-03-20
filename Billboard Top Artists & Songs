@@ -1,0 +1,90 @@
+## using Python, SQL, & Tableau to find the most poular artists & songs of the 2000s
+
+# install libraries and the billboard api
+!pip install billboard.py
+import pandas as pd
+import numpy as np
+import billboard as bb
+
+
+# create a chart for testing api functionality
+chart = bb.ChartData(name='hot-100', date='2010-05-01')
+
+
+# iterate through songs in chart to print song & artist name
+for song in range(5):
+    print('#', song+1, chart[song].title, 'by', chart[song].artist)
+    
+    
+# test method for gathering data by pulling data for the first two weeks of 2000
+from datetime import date, timedelta
+
+start_date = date(2000, 1, 1)
+end_date = date(2000, 1, 14)
+delta = timedelta(days=7)
+
+while start_date <= end_date:
+    chart = bb.ChartData('hot-100', date = start_date)
+    for song in range(5):
+        print(chart[song].title, 'by', chart[song].artist, 'for week #', chart[song].weeks)
+    start_date += delta
+    print('\n')
+    
+    
+# populate the dataframe
+from datetime import date, timedelta
+
+date_list = []
+artist_list = []
+title_list = []
+weeks_list = []
+rank_list = []
+
+start_date = date(2000, 1, 1)
+end_date = date(2009, 12, 31)
+delta = timedelta(days=7)
+
+while start_date <= end_date:
+    chart = bb.ChartData('hot-100', date = start_date)
+    for song in range(100):
+        date_list.append(start_date)
+        artist_list.append(chart[song].artist)
+        title_list.append(chart[song].title)
+        weeks_list.append(chart[song].weeks)
+        # invert the ranking so that the #1 song comes through as 100 & vice-versa
+        rank_list.append(100-song)
+    start_date += delta
+
+df_2000s = pd.DataFrame({'Date':date_list, 'Artist':artist_list, 'Title':title_list, 'WeeksIn100':weeks_list, 'WeeklyRank':rank_list})
+df_2000s.head()
+
+
+# need to cut out all featured artist names
+# use str.split to remove featured artists
+df_2000s['Artist'] = df_2000s['Artist'].str.split('Featuring', expand=True)[0]
+df_2000s.head(10)
+
+
+# install sql alchemy to access postgresql
+from sqlalchemy import create_engine
+
+
+# send the df to postgres
+conn = create_engine('postgresql://username:password@localhost/dbname')
+df_2000s.to_sql("hot2000s", conn)
+
+
+# create new df with max week count for each artist & title using sql
+df_week_count = pd.read_sql_query('SELECT "Artist", "Title", MAX("WeeksIn100") FROM hot2000s GROUP BY "Artist", "Title" ORDER BY MAX("WeeksIn100") DESC;',
+conn)
+
+df_week_count.head(10)
+
+
+# tableau public does not allow for connection to SQL DBs, so results need to be imported to Tableau
+# create .csv files from the created dataframes
+df_2000s.to_csv("hot2000s.csv")
+df_week_count.to_csv("hot2000s_summary.csv")
+
+
+## Results available on Tableau public profile: https://public.tableau.com/app/profile/trey.schmidt
